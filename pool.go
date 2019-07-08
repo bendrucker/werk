@@ -1,5 +1,7 @@
 package werk
 
+import "context"
+
 // Pool represents a fixed-size worker pool
 type Pool struct {
 	count int
@@ -45,9 +47,9 @@ func (p *Pool) Free(worker *Worker) {
 }
 
 // Do acquires a worker, executes the specified function/work, and frees the worker
-func (p *Pool) Do(work Work, fn func(Work)) {
+func (p *Pool) Do(work Work, fn WorkFunc) {
 	worker := p.Acquire()
 	defer p.Free(worker)
 
-	worker.Do(work, WorkFunc(fn))
+	worker.Do(context.TODO(), work, fn)
 }
