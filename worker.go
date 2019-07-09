@@ -18,7 +18,7 @@ type Work struct {
 }
 
 // WorkFunc is a function that receives and handles Work values
-type WorkFunc func(context.Context, interface{})
+type WorkFunc func(context.Context, interface{}) error
 
 // NewWorker initializes a new worker object
 func NewWorker() *Worker {
@@ -26,22 +26,23 @@ func NewWorker() *Worker {
 }
 
 // Do executes the WorkFunc with the Work
-func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) {
+func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) error {
 	if work.Timeout != 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, work.Timeout)
 		defer cancel()
 	}
 
-	done := make(chan struct{}, 1)
+	done := make(chan error, 1)
 	go func() {
-		fn(ctx, work.Value)
-		done <- struct{}{}
+		err := fn(ctx, work.Value)
+		done <- err
 	}()
 
 	select {
 	case <-ctx.Done():
-	case <-done:
-		return
+		return ctx.Err()
+	case err := <-done:
+		return err
 	}
 }
