@@ -74,21 +74,58 @@ func TestPoolAcquireTimeout(t *testing.T) {
 		AcquireTimeout: time.Duration(100),
 	})
 
-	// block the pool for 200ns
-	wg := &sync.WaitGroup{}
-	for i := 0; i < pool.Size(); i++ {
-		wg.Add(1)
-		go func() {
-			_, _ = pool.Do(context.TODO(), Work{"hello", 0}, func(ctx context.Context, v interface{}) (interface{}, error) {
-				wg.Done()
-				<-ctx.Done()
-				return nil, nil
-			})
-		}()
-	}
-	wg.Wait()
+	fill(context.TODO(), pool)
 
 	assert.Equal(t, 0, pool.Available())
 	_, err := pool.Acquire(context.TODO())
 	assert.Equal(t, ErrAcquireTimeout, err)
+}
+
+func TestPoolAcquireCancel(t *testing.T) {
+	pool := NewPool(10, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fill(context.TODO(), pool)
+	cancel()
+	_, err := pool.Acquire(ctx)
+	assert.Equal(t, context.Canceled, err)
+}
+
+func TestPoolDoAcquireTimeout(t *testing.T) {
+	pool := NewPool(10, &PoolOptions{
+		AcquireTimeout: time.Duration(100),
+	})
+
+	fill(context.TODO(), pool)
+	assert.Equal(t, 0, pool.Available())
+
+	_, err := pool.Do(context.TODO(), Work{}, mockWorkFunc(func() {
+		assert.Fail(t, "WorkFunc should not be called on acquire timeout")
+	}))
+	assert.Equal(t, ErrAcquireTimeout, err)
+}
+
+// fill fills the pool with work that will block until the context is canceled
+// it returns once the pool is full, i.e. all worker goroutines are running
+func fill(ctx context.Context, pool *Pool) {
+	wg := &sync.WaitGroup{}
+	for i := 0; i < pool.Size(); i++ {
+		wg.Add(1)
+		go func() {
+			_, _ = pool.Do(ctx, Work{}, mockWorkFunc(func() {
+				wg.Done()
+				<-ctx.Done()
+			}))
+		}()
+	}
+	wg.Wait()
+}
+
+func mockWorkFunc(fn func()) WorkFunc {
+	wf := func(_ context.Context, _ interface{}) (interface{}, error) {
+		fn()
+		return nil, nil
+	}
+
+	return wf
 }
