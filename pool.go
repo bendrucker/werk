@@ -47,9 +47,9 @@ func (p *Pool) Free(worker *Worker) {
 }
 
 // Do acquires a worker, executes the specified function/work, and frees the worker
-func (p *Pool) Do(work Work, fn WorkFunc) error {
+func (p *Pool) Do(ctx context.Context, work Work, fn WorkFunc) error {
 	worker := p.Acquire()
 	defer p.Free(worker)
 
-	return worker.Do(context.TODO(), work, fn)
+	return worker.Do(ctx, work, fn)
 }
