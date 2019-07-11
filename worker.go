@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Worker executes a single task and can be reused
+// Worker executes a single task and can be reused.
 type Worker struct{}
 
 // Work is an struct that holds the data that should be processed by the worker and an optional timeout
@@ -20,7 +20,7 @@ type Work struct {
 // Value specified in Work. A WorkFunc may return a single result and an error.
 type WorkFunc func(context.Context, interface{}) (interface{}, error)
 
-// NewWorker initializes a new worker object
+// NewWorker initializes a new worker object.
 func NewWorker() *Worker {
 	return &Worker{}
 }
@@ -32,8 +32,11 @@ type workResult struct {
 
 // Do invokes the WorkFunc with the Context and Work. The function will be invoked in a new goroutine.
 // Do will block until either:
+//
 // a) the fn returns a result
+//
 // b) work.Timeout has passed
+//
 // c) the supplied context is canceled
 func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) (interface{}, error) {
 	if work.Timeout != 0 {

@@ -10,7 +10,7 @@ type Pool struct {
 
 type workers chan *Worker
 
-// NewPool initializes a new Pool object
+// NewPool initializes a new Pool object.
 func NewPool(size int) *Pool {
 	p := &Pool{
 		size:  size,
@@ -24,22 +24,22 @@ func NewPool(size int) *Pool {
 	return p
 }
 
-// Size returns the originally specified Pool size
+// Size returns the originally specified Pool size.
 func (p *Pool) Size() int {
 	return p.size
 }
 
-// Available returns the number of workers that are ready to receive work
+// Available returns the number of workers that are ready to receive work.
 func (p *Pool) Available() int {
 	return len(p.ready)
 }
 
-// Acquire returns a ready worker from the pool, blocking until one is available
+// Acquire returns a ready worker from the pool, blocking until one is available.
 func (p *Pool) Acquire() *Worker {
 	return <-p.ready
 }
 
-// Free returns a worker to the pool
+// Free returns a worker to the pool.
 func (p *Pool) Free(worker *Worker) {
 	p.ready <- worker
 }
