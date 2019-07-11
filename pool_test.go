@@ -31,6 +31,23 @@ func ExampleNewPool() {
 	// err: oops
 }
 
+func ExamplePool_Do_timeout() {
+	pool := NewPool(10).Start()
+	work := Work{
+		Value:   "foo",
+		Timeout: time.Duration(100),
+	}
+
+	err := pool.Do(work, func(ctx context.Context, v interface{}) error {
+		time.Sleep(time.Duration(200))
+		return nil
+	})
+
+	fmt.Println("err:", err)
+
+	// Output: err: context deadline exceeded
+}
+
 func TestPool(t *testing.T) {
 	pool := NewPool(10).Start()
 
