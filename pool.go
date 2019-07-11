@@ -55,8 +55,9 @@ func (p *Pool) Available() int {
 // within the AcquireTimeout specified in PoolOptions.
 var ErrAcquireTimeout = errors.New("Acquire timeout")
 
-// Acquire returns a ready worker from the pool, blocking until one is available,
-// the context is canceled, or the AcquireTimeout passes.
+// Acquire returns a ready worker from the pool, blocking until one is
+// available, the context is canceled, or the AcquireTimeout passes. Acquire
+// will return ErrAcquireTimeout if the acquire timeout passes.
 func (p *Pool) Acquire(ctx context.Context) (*Worker, error) {
 	timer := time.NewTimer(p.options.AcquireTimeout)
 	if p.options.AcquireTimeout == 0 {
