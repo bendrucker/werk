@@ -31,7 +31,10 @@ type workResult struct {
 }
 
 // Do invokes the WorkFunc with the Context and Work. The function will be invoked in a new goroutine.
-// Do will block until either a) the fn returns a result or b) the timeout is reached.
+// Do will block until either:
+// a) the fn returns a result
+// b) work.Timeout has passed
+// c) the supplied context is canceled
 func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) (interface{}, error) {
 	if work.Timeout != 0 {
 		var cancel context.CancelFunc

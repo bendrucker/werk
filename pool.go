@@ -39,12 +39,13 @@ func (p *Pool) Acquire() *Worker {
 	return <-p.ready
 }
 
-// Free returns a worker to pool
+// Free returns a worker to the pool
 func (p *Pool) Free(worker *Worker) {
 	p.ready <- worker
 }
 
-// Do acquires a worker, executes the specified function/work, and frees the worker
+// Do acquires a worker, executes the specified function/work in a new goroutine, and frees the worker.
+// Do will block until the fn is done, times out, or the context is canceled.
 func (p *Pool) Do(ctx context.Context, work Work, fn WorkFunc) (interface{}, error) {
 	worker := p.Acquire()
 	defer p.Free(worker)
