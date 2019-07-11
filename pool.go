@@ -18,12 +18,13 @@ type Pool struct {
 
 // PoolOptions includes optional configuration for pool behavior
 type PoolOptions struct {
+	// AcquireTimeout specifies the maximum wait when calling Acquire
 	AcquireTimeout time.Duration
 }
 
 type workers chan *Worker
 
-// NewPool initializes a new Pool object.
+// NewPool initializes a new Pool object. The options argument can be nil.
 func NewPool(size int, options *PoolOptions) *Pool {
 	if options == nil {
 		options = &PoolOptions{}
