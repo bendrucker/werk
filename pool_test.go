@@ -2,11 +2,34 @@ package werk
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func ExampleNewPool() {
+	pool := NewPool(10).Start()
+
+	_ = pool.Do(Work{Value: "beep boop"}, func(ctx context.Context, v interface{}) error {
+		fmt.Println("value:", v)
+		fmt.Println("workers:", pool.Available())
+		return nil
+	})
+
+	err := pool.Do(Work{Value: "beep boop"}, func(ctx context.Context, v interface{}) error {
+		return errors.New("oops")
+	})
+
+	fmt.Println("err:", err)
+
+	// Output:
+	// value: beep boop
+	// workers: 9
+	// err: oops
+}
 
 func TestPool(t *testing.T) {
 	pool := NewPool(10).Start()
