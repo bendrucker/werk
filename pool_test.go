@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func ExampleNewPool() {
-	pool := NewPool(10)
+	pool := NewPool(10, nil)
 
 	result, _ := pool.Do(context.TODO(), Work{Value: "beep boop"}, func(ctx context.Context, v interface{}) (interface{}, error) {
 		fmt.Println("value:", v)
@@ -35,7 +36,7 @@ func ExampleNewPool() {
 }
 
 func ExamplePool_Do_timeout() {
-	pool := NewPool(10)
+	pool := NewPool(10, nil)
 	work := Work{
 		Value:   "foo",
 		Timeout: time.Duration(100),
@@ -53,7 +54,7 @@ func ExamplePool_Do_timeout() {
 }
 
 func TestPool(t *testing.T) {
-	pool := NewPool(10)
+	pool := NewPool(10, nil)
 
 	assert.Equal(t, pool.Size(), 10)
 	assert.Equal(t, pool.Available(), 10)
@@ -68,18 +69,26 @@ func TestPool(t *testing.T) {
 	assert.Equal(t, pool.Available(), 10)
 }
 
-func TestPoolTimeout(t *testing.T) {
-	pool := NewPool(10)
-
-	timeout := time.Duration(10) * time.Millisecond
-	errors := make(chan error, 1)
-
-	_, _ = pool.Do(context.TODO(), Work{"hello", timeout}, func(ctx context.Context, v interface{}) (interface{}, error) {
-		<-ctx.Done()
-		errors <- ctx.Err()
-		return nil, nil
+func TestPoolAcquireTimeout(t *testing.T) {
+	pool := NewPool(10, &PoolOptions{
+		AcquireTimeout: time.Duration(100),
 	})
 
-	err := <-errors
-	assert.Equal(t, context.DeadlineExceeded, err)
+	// block the pool for 200ns
+	wg := &sync.WaitGroup{}
+	for i := 0; i < pool.Size(); i++ {
+		wg.Add(1)
+		go func() {
+			_, _ = pool.Do(context.TODO(), Work{"hello", 0}, func(ctx context.Context, v interface{}) (interface{}, error) {
+				wg.Done()
+				<-ctx.Done()
+				return nil, nil
+			})
+		}()
+	}
+	wg.Wait()
+
+	assert.Equal(t, 0, pool.Available())
+	_, err := pool.Acquire(context.TODO())
+	assert.Equal(t, ErrAcquireTimeout, err)
 }

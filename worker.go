@@ -8,10 +8,14 @@ import (
 // Worker executes a single task and can be reused.
 type Worker struct{}
 
-// Work is an struct that holds the data that should be processed by the worker and an optional timeout
+// Work is an struct that holds the data that should be processed by the worker and an optional timeout.
 // The zero value of Work is valid. If the Timeout is 0, it will be ignored.
 type Work struct {
-	Value   interface{}
+	// Value is the input data associated with the work
+	Value interface{}
+
+	// Timeout is the maximum duration that Worker.Do will wait for a WorkFunc
+	// to complete before returning an error and canceling the context.
 	Timeout time.Duration
 }
 
