@@ -2,33 +2,31 @@ package werk
 
 import "context"
 
-// Pool represents a fixed-size worker pool
+// Pool represents a fixed-size worker pool. A Pool must be created with NewPool.
 type Pool struct {
-	count int
+	size  int
 	ready workers
 }
 
 type workers chan *Worker
 
 // NewPool initializes a new Pool object
-func NewPool(count int) *Pool {
-	return &Pool{
-		count: count,
-		ready: make(workers, count),
+func NewPool(size int) *Pool {
+	p := &Pool{
+		size:  size,
+		ready: make(workers, size),
 	}
-}
 
-// Start readies the number of workers specified in "count"
-func (p *Pool) Start() *Pool {
-	for i := 0; i < p.count; i++ {
-		p.worker()
+	for i := 0; i < p.size; i++ {
+		p.ready <- NewWorker()
 	}
 
 	return p
 }
 
-func (p *Pool) worker() {
-	p.ready <- NewWorker()
+// Size returns the originally specified Pool size
+func (p *Pool) Size() int {
+	return p.size
 }
 
 // Available returns the number of workers that are ready to receive work
@@ -47,7 +45,7 @@ func (p *Pool) Free(worker *Worker) {
 }
 
 // Do acquires a worker, executes the specified function/work, and frees the worker
-func (p *Pool) Do(ctx context.Context, work Work, fn WorkFunc) error {
+func (p *Pool) Do(ctx context.Context, work Work, fn WorkFunc) (interface{}, error) {
 	worker := p.Acquire()
 	defer p.Free(worker)
 

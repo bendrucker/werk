@@ -5,44 +5,54 @@ import (
 	"time"
 )
 
-// Worker executes a single task
-type Worker struct {
-	timeout time.Duration
-}
+// Worker executes a single task and can be reused
+type Worker struct{}
 
 // Work is an struct that holds the data that should be processed by the worker and an optional timeout
-// The zero-value of work is valid—if the Timeout is 0, it will be ignored.
+// The zero value of Work is valid. If the Timeout is 0, it will be ignored.
 type Work struct {
 	Value   interface{}
 	Timeout time.Duration
 }
 
-// WorkFunc is a function that receives and handles Work values
-type WorkFunc func(context.Context, interface{}) error
+// WorkFunc is the signature of functions that can handle Work.
+// A WorkFunc accepts a context and an interface that will hold the
+// Value specified in Work. A WorkFunc may return a single result and an error.
+type WorkFunc func(context.Context, interface{}) (interface{}, error)
 
 // NewWorker initializes a new worker object
 func NewWorker() *Worker {
 	return &Worker{}
 }
 
-// Do executes the WorkFunc with the Work
-func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) error {
+type workResult struct {
+	value interface{}
+	err   error
+}
+
+// Do invokes the WorkFunc with the Context and Work. The function will be invoked in a new goroutine.
+// Do will block until either a) the fn returns a result or b) the timeout is reached.
+func (w *Worker) Do(ctx context.Context, work Work, fn WorkFunc) (interface{}, error) {
 	if work.Timeout != 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, work.Timeout)
 		defer cancel()
 	}
 
-	done := make(chan error, 1)
+	done := make(chan workResult)
 	go func() {
-		err := fn(ctx, work.Value)
-		done <- err
+		v, err := fn(ctx, work.Value)
+		done <- workResult{v, err}
 	}()
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-done:
-		return err
+		return nil, ctx.Err()
+	case r := <-done:
+		if r.err != nil {
+			return nil, r.err
+		}
+
+		return r.value, nil
 	}
 }
