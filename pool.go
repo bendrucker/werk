@@ -1,5 +1,6 @@
 // Package werk a worker pool that can concurrently process work up to a specified pool size.
-// A worker pool is useful for limiting concurrency
+// A worker pool is useful for limiting concurrency. Operations in werk are blocking, but allow
+// early termination via configurable timeouts and context propagation.
 package werk
 
 import (
